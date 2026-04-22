@@ -62,4 +62,9 @@ public class FlightState
 
     private static int? ParseInt(object? value) =>
         int.TryParse(value?.ToString(), out int result) ? result : null;
+
+    public override string ToString()
+    {
+        return $"FlightState(Icao24={Icao24}, Callsign={Callsign}, OriginCountry={OriginCountry}, TimePosition={TimePosition}, LastContact={LastContact}, Longitude={Longitude}, Latitude={Latitude}, BaroAltitude={BaroAltitude}, OnGround={OnGround}, Velocity={Velocity}, TrueTrack={TrueTrack}, VerticalRate={VerticalRate}, Sensors=[{string.Join(", ", Sensors ?? new int[0])}], GeoAltitude={GeoAltitude}, Squawk={Squawk}, Spi={Spi}, PositionSource={PositionSource}, Category={Category})";
+    }
 }

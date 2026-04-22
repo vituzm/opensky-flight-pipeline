@@ -30,10 +30,10 @@ public class Worker : BackgroundService
                 {
                     {"time", null},
                     {"icao24", null},
-                    {"lamin", "3.339844"},
-                    {"lomin", "12.382928"},
-                    {"lamax", "15.644531"},
-                    {"lomax", "23.483401"},
+                    {"lamin", "-35.546753"},
+                    {"lomin", "-61.369629"},
+                    {"lamax", "-26.013595"},
+                    {"lomax", "-47.746582"},
                     {"extended", "1"}
                 };
 
