@@ -1,5 +1,6 @@
 namespace IngestorOpenSky.Services;
 
+using System.Text;
 using Confluent.Kafka;
 using IngestorOpenSky.Models;
 
@@ -19,27 +20,43 @@ public class KafkaProducerService
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    public async Task EnviarMensagem(OpenSkyResponse response)
+    public void EnviarMensagem(OpenSkyResponse response, Dictionary<string, string?> parametros)
     {
         int unixTimestamp = response.Time;
         List<FlightState> voos = response.States;
         
-        foreach(voo in voos)
+        Headers HeadersApiRequest = BuildHeaders(unixTimestamp, parametros);
+
+        foreach(var voo in voos)
         {
             string jsonValue = System.Text.Json.JsonSerializer.Serialize(voo);
 
-            var Headers = new Headers 
-            { 
-                { "api_unix_time", Encoding.UTF8.GetBytes(voo.Time.ToString()) },
-                { "source", Encoding.UTF8.GetBytes("opensky_api") }
-            };
-            
             var mensagem = new Message<string, string>
             {
                 Key = voo.Icao24, // Identificador único do avião
                 Value = jsonValue
             };
-
+            // a chave do kafka nao deveria ser o icao24 + timestamp?
+            // todo: logica de retry, dead letter queue com o rocks db 
         }
     }
+
+    private Headers BuildHeaders(int unixTimestamp,Dictionary<string, string?> parametros)
+    {
+        var HeadersApiRequest = new Headers 
+        { 
+                { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp.ToString()) },
+                { "source", Encoding.UTF8.GetBytes("opensky_api") },
+        };
+
+        foreach (var param in parametros)
+        {
+            if (param.Value != null)
+            {
+                HeadersApiRequest.Add(param.Key, Encoding.UTF8.GetBytes(param.Value));
+            }
+        }
+
+        return HeadersApiRequest;
+    }  
 }

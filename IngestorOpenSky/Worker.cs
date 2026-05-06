@@ -1,6 +1,7 @@
 
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
+using IngestorOpenSky.Services;
 
 namespace IngestorOpenSky;
 
@@ -8,11 +9,13 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IOpenSkyClient _openSkyClient;
+    private readonly KafkaProducerService _kafkaProducerService; // todo: criar uma interface para o producer
 
-    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient)
+    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, KafkaProducerService kafkaProducerService)
     {
         _logger = logger;
         _openSkyClient = openSkyClient;
+        _kafkaProducerService = kafkaProducerService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -37,7 +40,8 @@ public class Worker : BackgroundService
                     {"extended", "1"}
                 };
 
-                await _openSkyClient.GetDadosOpenSky(dict_parametros);
+                OpenSkyResponse response = await _openSkyClient.GetDadosOpenSky(dict_parametros);
+                _kafkaProducerService.EnviarMensagem(response, dict_parametros);
                 _logger.LogInformation("Ingestão concluída. Pressione 's' para nova requisição ou 'q' para sair.");
             }
             else if (key.Key == ConsoleKey.Q)
