@@ -41,7 +41,7 @@ public class Worker : BackgroundService
                 };
 
                 OpenSkyResponse response = await _openSkyClient.GetDadosOpenSky(dict_parametros);
-                _kafkaProducerService.EnviarMensagem(response, dict_parametros);
+                _kafkaProducerService.EnviarMensagensOpenSky(response, dict_parametros);
                 _logger.LogInformation("Ingestão concluída. Pressione 's' para nova requisição ou 'q' para sair.");
             }
             else if (key.Key == ConsoleKey.Q)

@@ -20,32 +20,24 @@ public class KafkaProducerService
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    public void EnviarMensagem(OpenSkyResponse response, Dictionary<string, string?> parametros)
+    public void EnviarMensagensOpenSky(OpenSkyResponse response, Dictionary<string, string?> parametros)
     {
-        int unixTimestamp = response.Time;
+        string unixTimestamp = response.Time.ToString();
         List<FlightState> voos = response.States;
         
         Headers HeadersApiRequest = BuildHeaders(unixTimestamp, parametros);
 
         foreach(var voo in voos)
         {
-            string jsonValue = System.Text.Json.JsonSerializer.Serialize(voo);
-
-            var mensagem = new Message<string, string>
-            {
-                Key = voo.Icao24, // Identificador único do avião
-                Value = jsonValue
-            };
-            // a chave do kafka nao deveria ser o icao24 + timestamp?
-            // todo: logica de retry, dead letter queue com o rocks db 
+            EnviarMensagem(HeadersApiRequest, voo);
         }
     }
 
-    private Headers BuildHeaders(int unixTimestamp,Dictionary<string, string?> parametros)
+    private Headers BuildHeaders(string unixTimestamp, Dictionary<string, string?> parametros)
     {
         var HeadersApiRequest = new Headers 
         { 
-                { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp.ToString()) },
+                { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp) },
                 { "source", Encoding.UTF8.GetBytes("opensky_api") },
         };
 
@@ -59,4 +51,28 @@ public class KafkaProducerService
 
         return HeadersApiRequest;
     }  
+
+    private void EnviarMensagem(string topic,Headers headers, FlightState voo)
+    {
+        string jsonValue = System.Text.Json.JsonSerializer.Serialize(voo);
+
+        var mensagem = new Message<string, string>
+        {
+            Key = voo.Icao24, // Identificador único do avião
+            Value = jsonValue
+        };
+
+        _producer.Produce(topic, mensagem, (deliveryHandler) => {
+            if(deliveryHandler.Error.IsError)
+            {
+                _logger.LogError($"Erro ao enviar mensagem para Kafka: {deliveryHandler.Error.Reason}");
+            }
+            else
+            {
+                _logger.LogInformation($"Mensagem enviada com sucesso para Kafka: {deliveryHandler.TopicPartitionOffset}");
+            
+            }
+        })
+
+    }
 }
