@@ -2,57 +2,58 @@ namespace IngestorOpenSky.Services;
 
 using System.Text;
 using Confluent.Kafka;
+using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
 
-public class KafkaProducerService
+public class KafkaProducerService : IKafkaProducerService
 {
     private readonly IProducer<string, string> _producer; // Temporariamente string (JSON)
     private readonly ILogger<KafkaProducerService> _logger;
     private const string TopicName = "flight-data";
-
+    private readonly ProducerConfig _config = new ProducerConfig
+    {
+        BootstrapServers = "localhost:9092,localhost:9094,localhost:9095"
+    };
+    
     public KafkaProducerService(ILogger<KafkaProducerService> logger)
     {
         _logger = logger;
-        var config = new ProducerConfig { 
-            BootstrapServers = "localhost:9092,localhost:9094,localhost:9095"
-        };
-
-        _producer = new ProducerBuilder<string, string>(config).Build();
+        _producer = new ProducerBuilder<string, string>(_config).Build();
     }
 
     public void EnviarMensagensOpenSky(OpenSkyResponse response, Dictionary<string, string?> parametros)
     {
         string unixTimestamp = response.Time.ToString();
-        List<FlightState> voos = response.States;
-        
-        Headers HeadersApiRequest = BuildHeaders(unixTimestamp, parametros);
+        Headers headers = BuildHeaders(unixTimestamp, parametros);
 
-        foreach(var voo in voos)
+        foreach (var voo in response.States)
         {
-            EnviarMensagem(HeadersApiRequest, voo);
+            EnviarMensagemAsync(headers, voo);
         }
+
+        _producer.Flush();
     }
 
-    private Headers BuildHeaders(string unixTimestamp, Dictionary<string, string?> parametros)
+    private static Headers BuildHeaders(string unixTimestamp, Dictionary<string, string?> parametros)
     {
-        var HeadersApiRequest = new Headers 
-        { 
-                { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp) },
-                { "source", Encoding.UTF8.GetBytes("opensky_api") },
+        var headers = new Headers
+        {
+            { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp) },
+            { "source", Encoding.UTF8.GetBytes("opensky_api") }
         };
 
         foreach (var param in parametros)
         {
             if (param.Value != null)
             {
-                HeadersApiRequest.Add(param.Key, Encoding.UTF8.GetBytes(param.Value));
+                headers.Add(param.Key, Encoding.UTF8.GetBytes(param.Value));
             }
         }
 
-        return HeadersApiRequest;
-    }  
+        return headers;
+    }
 
-    private void EnviarMensagem(string topic,Headers headers, FlightState voo)
+    private void EnviarMensagemAsync(Headers headers, FlightState voo)
     {
         string jsonValue = System.Text.Json.JsonSerializer.Serialize(voo);
 

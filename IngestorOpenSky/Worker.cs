@@ -1,7 +1,6 @@
 
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
-using IngestorOpenSky.Services;
 
 namespace IngestorOpenSky;
 
@@ -9,9 +8,9 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IOpenSkyClient _openSkyClient;
-    private readonly KafkaProducerService _kafkaProducerService; // todo: criar uma interface para o producer
+    private readonly IKafkaProducerService _kafkaProducerService;
 
-    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, KafkaProducerService kafkaProducerService)
+    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IKafkaProducerService kafkaProducerService)
     {
         _logger = logger;
         _openSkyClient = openSkyClient;
