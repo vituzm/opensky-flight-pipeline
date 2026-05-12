@@ -4,5 +4,5 @@ namespace IngestorOpenSky.Interfaces;
 
 public interface IKafkaProducerService
 {
-    void EnviarMensagensOpenSky(OpenSkyResponse response, IReadOnlyDictionary<string, string?> parametros);
+    void EnviarMensagensOpenSky(OpenSkyResponse response, Dictionary<string, string?> parametros);
 }

@@ -63,7 +63,7 @@ public class KafkaProducerService : IKafkaProducerService
             Value = jsonValue
         };
 
-        _producer.Produce(topic, mensagem, (deliveryHandler) => {
+        _producer.Produce(TopicName, mensagem, (deliveryHandler) => {
             if(deliveryHandler.Error.IsError)
             {
                 _logger.LogError($"Erro ao enviar mensagem para Kafka: {deliveryHandler.Error.Reason}");
@@ -72,8 +72,8 @@ public class KafkaProducerService : IKafkaProducerService
             {
                 _logger.LogInformation($"Mensagem enviada com sucesso para Kafka: {deliveryHandler.TopicPartitionOffset}");
             
-            }
-        })
+            };
+        });
 
     }
 }
