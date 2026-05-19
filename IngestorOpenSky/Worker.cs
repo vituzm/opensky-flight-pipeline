@@ -8,12 +8,15 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IOpenSkyClient _openSkyClient;
+    private readonly IFlightDataMapper _flightDataMapper;
+
     private readonly IKafkaProducerService _kafkaProducerService;
 
-    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IKafkaProducerService kafkaProducerService)
+    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IFlightDataMapper flightDataMapper, IKafkaProducerService kafkaProducerService)
     {
         _logger = logger;
         _openSkyClient = openSkyClient;
+        _flightDataMapper = flightDataMapper;
         _kafkaProducerService = kafkaProducerService;
     }
 
@@ -40,7 +43,9 @@ public class Worker : BackgroundService
                 };
 
                 OpenSkyResponse response = await _openSkyClient.GetDadosOpenSky(dict_parametros);
-                _kafkaProducerService.EnviarMensagensOpenSky(response, dict_parametros);
+                List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros);
+                _kafkaProducerService.EnviarMensagensOpenSky(kafkaEvents, "flight-data");
+
                 _logger.LogInformation("Ingestão concluída. Pressione 's' para nova requisição ou 'q' para sair.");
             }
             else if (key.Key == ConsoleKey.Q)
