@@ -22,7 +22,7 @@ public class FlightState
     public int PositionSource { get; set; }
     public int Category { get; set; }
 
-    public static FlightState MapearDoArray(object?[] data)
+    public static FlightState MapArrayFlightState(object?[] data)
     {
         return new FlightState
         {
@@ -56,7 +56,6 @@ public class FlightState
         };
     }
 
-    // Métodos auxiliares para a conversão não quebrar o código
     private static float? ParseFloat(object? value) =>
         float.TryParse(value?.ToString(), out float result) ? result : null;
 

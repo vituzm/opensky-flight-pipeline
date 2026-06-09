@@ -22,34 +22,35 @@ public class OpenSkyClient : IOpenSkyClient
         _env = env;
     }
 
-    public async Task<OpenSkyResponse> GetDadosOpenSky(Dictionary<string, string?> parametros)
+    public async Task<OpenSkyResponse> GetDataOpenSky(Dictionary<string, string?> parameters)
     {
         var client = _httpClientFactory.CreateClient();
-        var endpoint = ConstruirEndpoint(parametros);
+        var endpoint = BuildEndpoint(parameters);
         
-        int maxTentativas = 3;
+        int maxAttempts = 3;
         TimeSpan delay = TimeSpan.FromSeconds(5); // Começa esperando 5 segundos
 
-        for (int i = 1; i <= maxTentativas; i++)
+        for (int i = 1; i <= maxAttempts; i++)
         {
             try
             {
                 using var response = await client.GetAsync(endpoint, HttpCompletionOption.ResponseHeadersRead);
                 
-                ValidarResponse(response);
+                ValidateReponse(response);
 
-                var apiResponse = await ProcessarResposta(response);
-                LogDetalhesDev(parametros, response, apiResponse.States.Count, apiResponse.Time);
+                var apiResponse = await ProcessResponse(response);
+                
+                LogDetalhesDev(parameters, response, apiResponse.States.Count, apiResponse.Time);
                 
                 return apiResponse;
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogWarning("Tentativa {i} falhou: {msg}", i, ex.Message);
+                _logger.LogWarning("Attempt {i} has failed: {msg}", i, ex.Message);
 
-                if (i == maxTentativas)
+                if (i == maxAttempts)
                 {
-                    _logger.LogError("Número máximo de tentativas atingido.");
+                    _logger.LogError("Maximum number of attempts reached.");
                     throw;
                 }
 
@@ -61,50 +62,50 @@ public class OpenSkyClient : IOpenSkyClient
         return new OpenSkyResponse();
     }
 
-    private Uri ConstruirEndpoint(Dictionary<string, string?> parametros)
+    private Uri BuildEndpoint(Dictionary<string, string?> parameters)
     {
-        var uri = QueryHelpers.AddQueryString(OpenSkyUrl, parametros);
+        var uri = QueryHelpers.AddQueryString(OpenSkyUrl, parameters);
         return new Uri(uri);
     }
 
-    private void ValidarResponse(HttpResponseMessage response)
+    private void ValidateReponse(HttpResponseMessage response)
     {   
         if(response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
         {
-            _logger.LogWarning("Limite de requisições atingido (429). Verifique os header X-Rate-Limit-Remaining para detalhes do rate limit.");
+            _logger.LogWarning("Maximum number of requests reached (429). Check the X-Rate-Limit-Remaining header for rate limit details.");
         }
         else if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("API OpenSky retornou erro: {statusCode}", response.StatusCode);
-            throw new HttpRequestException($"Erro OpenSky: {response.StatusCode}");
+            _logger.LogError("OpenSky API returned an error: {statusCode}", response.StatusCode);
+            throw new HttpRequestException($"OpenSky Error: {response.StatusCode}");
         }
     }
 
-    private async Task<OpenSkyResponse> ProcessarResposta(HttpResponseMessage response)
+    private async Task<OpenSkyResponse> ProcessResponse(HttpResponseMessage response)
     {
         using var contentStream = await response.Content.ReadAsStreamAsync();
         var apiResponse = await JsonSerializer.DeserializeAsync<OpenSkyResponse>(contentStream, _jsonOptions);
 
         if (apiResponse?.StatesRaw == null)
         {
-            _logger.LogWarning("Resposta vazia ou sem estados de voo.");
+            _logger.LogWarning("OpenSky API returned an empty response or no flight states.");
             return apiResponse ?? new OpenSkyResponse();
         }
 
         // Mapeamento
         apiResponse.States = apiResponse.StatesRaw
-            .Select(FlightState.MapearDoArray)
+            .Select(FlightState.MapArrayFlightState)
             .ToList();
 
         return apiResponse;
     }
 
-    private void LogDetalhesDev(Dictionary<string, string?> parametros, HttpResponseMessage response, int count, int time)
+    private void LogDetalhesDev(Dictionary<string, string?> parameters, HttpResponseMessage response, int count, int time)
     {
         if (!_env.IsDevelopment()) return;
 
         // Formata os parâmetros do dicionário
-        var paramsFormatados = string.Join("\n    ", parametros.Select(p => $"{p.Key}: {p.Value ?? "null"}"));
+        var paramsFormatados = string.Join("\n    ", parameters.Select(p => $"{p.Key}: {p.Value ?? "null"}"));
 
         // Formata os Headers (importante para ver o Rate Limit da OpenSky)
         var headersFormatados = string.Join("\n    ", response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));

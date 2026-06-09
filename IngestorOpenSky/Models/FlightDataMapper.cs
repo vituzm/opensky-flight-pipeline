@@ -1,20 +1,21 @@
 namespace IngestorOpenSky.Models;
+using IngestorOpenSky.Interfaces;
 using System.Text;
 
-class FlightDataMapper
+class FlightDataMapper : IFlightDataMapper
 {
-    public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parametros)
+    public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters)
     {
 
         List<KafkaEvent> eventos = new List<KafkaEvent>(); 
-        var dicionarioHeader = BuildHeaders(response.Time.ToString(), parametros);
+        var dicionarioHeader = BuildHeaders(response.Time.ToString(), parameters);
 
         foreach (var voo in response.States)
         {
-            var vooString = SerializaVoo(voo);
+            var vooString = SerializeFlight(voo);
             var kafkaEvent = new KafkaEvent
             {
-                Key = voo.Icao24, // Identificador único do avião
+                Key = voo.Icao24, // ID from the plane
                 Value = vooString,
                 Headers = dicionarioHeader
             };
@@ -26,15 +27,15 @@ class FlightDataMapper
     }
 
     
-    private static Dictionary<string, byte[]> BuildHeaders(string unixTimestamp, Dictionary<string, string?> parametros)
+    private static Dictionary<string, byte[]> BuildHeaders(string unixTimestamp, Dictionary<string, string?> parameters)
     {
         var headers = new Dictionary<string, byte[]>
         {
-            { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp)}, // E se o dado for nulo? 
+            { "api_unix_time", Encoding.UTF8.GetBytes(unixTimestamp)},
             { "source", Encoding.UTF8.GetBytes("opensky_api")}
         };
 
-        foreach (var param in parametros)
+        foreach (var param in parameters)
         {
             if (param.Value != null)
             {
@@ -45,7 +46,7 @@ class FlightDataMapper
         return headers;
     }
 
-    private static string SerializaVoo(FlightState voo)
+    private static string SerializeFlight(FlightState voo)
     {
         return System.Text.Json.JsonSerializer.Serialize(voo);
     }

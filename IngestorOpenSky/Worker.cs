@@ -42,9 +42,15 @@ public class Worker : BackgroundService
                     {"extended", "1"}
                 };
 
-                OpenSkyResponse response = await _openSkyClient.GetDadosOpenSky(dict_parametros);
+                OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(dict_parametros);
                 List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros);
-                _kafkaProducerService.EnviarMensagensOpenSky(kafkaEvents, "flight-data");
+                Console.WriteLine($"Total de eventos mapeados: {kafkaEvents.Count}");
+                foreach (var evento in kafkaEvents.Take(5)) // Exibe os primeiros 5 eventos para verificação
+                {
+                    Console.WriteLine($"Evento: Key={evento.Key}, Value={evento.Value}, Headers={string.Join(", ", evento.Headers.Select(h => $"{h.Key}={Convert.ToBase64String(h.Value)}"))}");
+                }
+                
+                // _kafkaProducerService.SendMessages(kafkaEvents, "flight-data");
 
                 _logger.LogInformation("Ingestão concluída. Pressione 's' para nova requisição ou 'q' para sair.");
             }

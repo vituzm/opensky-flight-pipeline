@@ -4,5 +4,5 @@ namespace IngestorOpenSky.Interfaces;
 
 public interface IKafkaProducerService
 {
-    void EnviarMensagensOpenSky(List<KafkaEvent> kafkaEvents, string topicName);
+    void SendMessages(List<KafkaEvent> kafkaEvents, string topicName);
 }
