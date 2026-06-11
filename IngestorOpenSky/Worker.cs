@@ -9,10 +9,14 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly IOpenSkyClient _openSkyClient;
     private readonly IOpenSkyDataMapper _flightDataMapper;
-
     private readonly IKafkaProducerService _kafkaProducerService;
 
-    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IOpenSkyDataMapper flightDataMapper, IKafkaProducerService kafkaProducerService)
+    public Worker(
+        ILogger<Worker> logger, 
+        IOpenSkyClient openSkyClient, 
+        IOpenSkyDataMapper flightDataMapper, 
+        IKafkaProducerService kafkaProducerService
+    )
     {
         _logger = logger;
         _openSkyClient = openSkyClient;
@@ -43,7 +47,7 @@ public class Worker : BackgroundService
                 };
 
                 OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(dict_parametros);
-                List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros);
+                List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros, "flight-data");
                 Console.WriteLine($"Total de eventos mapeados: {kafkaEvents.Count}");
                 foreach (var evento in kafkaEvents.Take(5)) // Exibe os primeiros 5 eventos para verificação
                 {

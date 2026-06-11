@@ -1,5 +1,6 @@
 namespace IngestorOpenSky.Services;
 
+using System.Text.Json;
 using Confluent.Kafka;
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
@@ -7,24 +8,28 @@ using IngestorOpenSky.Models;
 public class KafkaProducerService : IKafkaProducerService, IDisposable
 {
     private readonly IProducer<string, string> _producer;
+    private readonly ProducerConfig _config;
     private readonly ILogger<KafkaProducerService> _logger;
-    private readonly ProducerConfig _config = new ProducerConfig
-    {
-        BootstrapServers = "localhost:9092,localhost:9094,localhost:9095",
-    };
+    private readonly IEventFailureRepository _eventFailureRepository;
     
-    public KafkaProducerService(ILogger<KafkaProducerService> logger)
+    public KafkaProducerService(ILogger<KafkaProducerService> logger, IEventFailureRepository eventFailureRepository)
     {
         _logger = logger;
+        _eventFailureRepository = eventFailureRepository;
+        _config = new ProducerConfig
+            {
+                BootstrapServers = "localhost:9092,localhost:9094,localhost:9095",
+                MessageTimeoutMs = 5000
+            };
+
         _producer = new ProducerBuilder<string, string>(_config).Build();
     }
 
-    public void SendMessages(List<KafkaEvent> kafkaEvents, string topicName)
+    public void SendMessages(List<KafkaEvent> kafkaEvents)
     {
         foreach (var eventKafka in kafkaEvents)
         {
-            var message = KafkaEventToMessage(eventKafka);
-            SendMessageAsync(message, topicName);
+            SendMessageAsync(eventKafka);
         }
 
     }
@@ -51,13 +56,19 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
         return kafkaHeaders;
     }
 
-    private void SendMessageAsync(Message<string, string> message, string topicName)
+    private void SendMessageAsync(KafkaEvent eventKafka)
     {
+        var message = KafkaEventToMessage(eventKafka);
 
-        _producer.Produce(topicName, message, (deliveryHandler) => {
+        _producer.Produce(eventKafka.Topic, message, (deliveryHandler) => {
             if(deliveryHandler.Error.IsError)
             {
                 _logger.LogError($"Error sending message to Kafka: {deliveryHandler.Error.Reason}");
+
+                string rocksKey = $"{eventKafka.Topic}_{DateTime.UtcNow.Ticks}_{eventKafka.Key}";
+                byte[] eventBytes = JsonSerializer.SerializeToUtf8Bytes(eventKafka);
+                
+                _eventFailureRepository.SaveMessageFailure(rocksKey, eventBytes);
             }
             else
             {
@@ -70,14 +81,6 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
     public void Dispose()
     {
         _logger.LogInformation("Disposing Kafka Producer...");
-        int remainingQueueCount = _producer.Flush(TimeSpan.FromSeconds(60));
-
-        if (remainingQueueCount > 0)
-        {
-            _logger.LogCritical($"Flush timed out. {remainingQueueCount} messages left.");
-            // Rocks DB persistence
-        };
-
         _producer.Dispose();
     }
 }

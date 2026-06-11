@@ -4,7 +4,7 @@ using System.Text;
 
 class OpenSkyDataMapper : IOpenSkyDataMapper
 {
-    public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters)
+    public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters, string topic)
     {
 
         List<KafkaEvent> eventos = new List<KafkaEvent>(); 
@@ -15,6 +15,7 @@ class OpenSkyDataMapper : IOpenSkyDataMapper
             var vooString = SerializeFlight(voo);
             var kafkaEvent = new KafkaEvent
             {
+                Topic = topic,
                 Key = voo.Icao24, // ID from the plane
                 Value = vooString,
                 Headers = dicionarioHeader

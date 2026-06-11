@@ -20,7 +20,7 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
         _db = RocksDb.Open(_options, _path);
     }
 
-    public void SaveMessageFailure(Dictionary<string, byte[]> keyValues)
+    public void SaveMessageFailure(string key, byte[] values)
     {
         throw new NotImplementedException();
     }
