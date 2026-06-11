@@ -20,20 +20,31 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
         _db = RocksDb.Open(_options, _path);
     }
 
-    public void SaveMessageFailure(string key, byte[] values)
+    public void SaveMessageFailure(string key, string values)
     {
-        throw new NotImplementedException();
+        _db.Put(key, values);
     }
 
 
-    public List<Dictionary<string, string>> GetAllMessageFailures()
+    public Dictionary<string, string> GetAllMessageFailures()
     {
-        throw new NotImplementedException();
+        var failedMessages = new Dictionary<string, string>(); 
+
+        using var iterator = _db.NewIterator();
+        
+        for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
+        {
+            failedMessages.Add(iterator.StringKey(), iterator.StringValue());
+        }
+
+        return failedMessages;
     }
 
-    public void DeleteMessage(string key)
+
+
+    public void RemoveMessage(string key)
     {
-        throw new NotImplementedException();
+        _db.Remove(key);
     }
 
     public void Dispose()

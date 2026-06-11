@@ -66,9 +66,9 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
                 _logger.LogError($"Error sending message to Kafka: {deliveryHandler.Error.Reason}");
 
                 string rocksKey = $"{eventKafka.Topic}_{DateTime.UtcNow.Ticks}_{eventKafka.Key}";
-                byte[] eventBytes = JsonSerializer.SerializeToUtf8Bytes(eventKafka);
+                // byte[] eventBytes = JsonSerializer.SerializeToUtf8Bytes(eventKafka);
                 
-                _eventFailureRepository.SaveMessageFailure(rocksKey, eventBytes);
+                _eventFailureRepository.SaveMessageFailure(rocksKey, JsonSerializer.Serialize(eventKafka));
             }
             else
             {
