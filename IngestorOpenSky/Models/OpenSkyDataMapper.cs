@@ -2,7 +2,7 @@ namespace IngestorOpenSky.Models;
 using IngestorOpenSky.Interfaces;
 using System.Text;
 
-class FlightDataMapper : IFlightDataMapper
+class OpenSkyDataMapper : IOpenSkyDataMapper
 {
     public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters)
     {

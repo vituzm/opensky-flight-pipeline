@@ -8,11 +8,11 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IOpenSkyClient _openSkyClient;
-    private readonly IFlightDataMapper _flightDataMapper;
+    private readonly IOpenSkyDataMapper _flightDataMapper;
 
     private readonly IKafkaProducerService _kafkaProducerService;
 
-    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IFlightDataMapper flightDataMapper, IKafkaProducerService kafkaProducerService)
+    public Worker(ILogger<Worker> logger, IOpenSkyClient openSkyClient, IOpenSkyDataMapper flightDataMapper, IKafkaProducerService kafkaProducerService)
     {
         _logger = logger;
         _openSkyClient = openSkyClient;

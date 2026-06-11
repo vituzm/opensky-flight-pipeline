@@ -4,7 +4,7 @@ using Confluent.Kafka;
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
 
-public class KafkaProducerService : IKafkaProducerService
+public class KafkaProducerService : IKafkaProducerService, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<KafkaProducerService> _logger;
@@ -27,7 +27,6 @@ public class KafkaProducerService : IKafkaProducerService
             SendMessageAsync(message, topicName);
         }
 
-        _producer.Flush();
     }
 
     private Message<string, string> KafkaEventToMessage(KafkaEvent eventoKafka)
@@ -66,6 +65,19 @@ public class KafkaProducerService : IKafkaProducerService
             
             };
         });
+    }
 
+    public void Dispose()
+    {
+        _logger.LogInformation("Disposing Kafka Producer...");
+        int remainingQueueCount = _producer.Flush(TimeSpan.FromSeconds(60));
+
+        if (remainingQueueCount > 0)
+        {
+            _logger.LogCritical($"Flush timed out. {remainingQueueCount} messages left.");
+            // Rocks DB persistence
+        };
+
+        _producer.Dispose();
     }
 }

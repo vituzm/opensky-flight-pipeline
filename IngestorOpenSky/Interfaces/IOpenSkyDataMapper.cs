@@ -1,6 +1,6 @@
 namespace IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
-public interface IFlightDataMapper
+public interface IOpenSkyDataMapper
 {
     List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parametros);
 }
