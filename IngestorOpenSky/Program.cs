@@ -6,6 +6,7 @@ using IngestorOpenSky.Models;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IOpenSkyClient, OpenSkyClient>();
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddSingleton<IOpenSkyDataMapper, OpenSkyDataMapper>();

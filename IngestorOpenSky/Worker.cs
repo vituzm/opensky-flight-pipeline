@@ -10,30 +10,33 @@ public class Worker : BackgroundService
     private readonly IOpenSkyClient _openSkyClient;
     private readonly IOpenSkyDataMapper _flightDataMapper;
     private readonly IKafkaProducerService _kafkaProducerService;
+    private readonly IEventFailureRepository _eventFailureRepository;
 
     public Worker(
         ILogger<Worker> logger, 
         IOpenSkyClient openSkyClient, 
         IOpenSkyDataMapper flightDataMapper, 
-        IKafkaProducerService kafkaProducerService
+        IKafkaProducerService kafkaProducerService,
+        IEventFailureRepository eventFailureRepository
     )
     {
         _logger = logger;
         _openSkyClient = openSkyClient;
         _flightDataMapper = flightDataMapper;
         _kafkaProducerService = kafkaProducerService;
+        _eventFailureRepository = eventFailureRepository;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Worker aguardando comando. Pressione 's' para iniciar ingestão, 'q' para sair.");
+        _logger.LogInformation("Worker waitint for command. Press 's' to initiate, 'q' to exit. Press 'r' to reproce failed messages.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.S)
             {
-                _logger.LogInformation("Iniciando ingestão de dados...");
+                _logger.LogInformation("Initializing data ingestion...");
 
                 var dict_parametros = new Dictionary<string, string?>
                 {
@@ -48,20 +51,36 @@ public class Worker : BackgroundService
 
                 OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(dict_parametros);
                 List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros, "flight-data");
-                Console.WriteLine($"Total de eventos mapeados: {kafkaEvents.Count}");
-                foreach (var evento in kafkaEvents.Take(5)) // Exibe os primeiros 5 eventos para verificação
-                {
-                    Console.WriteLine($"Evento: Key={evento.Key}, Value={evento.Value}, Headers={string.Join(", ", evento.Headers.Select(h => $"{h.Key}={Convert.ToBase64String(h.Value)}"))}");
-                }
-                
-                // _kafkaProducerService.SendMessages(kafkaEvents, "flight-data");
+                                
+                _kafkaProducerService.SendMessages(kafkaEvents);
 
-                _logger.LogInformation("Ingestão concluída. Pressione 's' para nova requisição ou 'q' para sair.");
+                _logger.LogInformation("Data ingestion completed. Press 's' for new request or 'q' to quit.");
             }
             else if (key.Key == ConsoleKey.Q)
             {
-                _logger.LogInformation("Encerrando worker...");
+                _logger.LogInformation("Shutting down worker...");
                 break;
+            }
+            else if (key.Key == ConsoleKey.R)
+            {
+                _logger.LogInformation("Reprocessing failed messages...");
+                var falhas = _eventFailureRepository.GetAllMessageFailures();
+
+                if (falhas.Count == 0)
+                {
+                    _logger.LogWarning("RocksDB is empty!");
+                }
+                else
+                {
+                    _logger.LogInformation($"Failed messages found: {falhas.Count}");
+                    foreach (var item in falhas)
+                    {
+                        Console.WriteLine($"\n[KEY]: {item.Key}");
+                        Console.WriteLine($"[VALUE]: {item.Value}");
+                        Console.WriteLine(new string('-', 50));
+                    }
+                }
+                _logger.LogInformation("End of query. 's' for Ingestion, 'r' for Reload, 'q' for Exit.");
             }
         }
     }

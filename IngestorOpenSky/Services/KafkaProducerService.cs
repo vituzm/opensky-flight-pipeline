@@ -22,7 +22,12 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
                 MessageTimeoutMs = 5000
             };
 
-        _producer = new ProducerBuilder<string, string>(_config).Build();
+        _producer = new ProducerBuilder<string, string>(_config)
+            .SetLogHandler((_, logMessage) => 
+            {
+                
+            })
+            .Build();
     }
 
     public void SendMessages(List<KafkaEvent> kafkaEvents)
@@ -65,8 +70,7 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
             {
                 _logger.LogError($"Error sending message to Kafka: {deliveryHandler.Error.Reason}");
 
-                string rocksKey = $"{eventKafka.Topic}_{DateTime.UtcNow.Ticks}_{eventKafka.Key}";
-                // byte[] eventBytes = JsonSerializer.SerializeToUtf8Bytes(eventKafka);
+                string rocksKey = $"{eventKafka.Topic}_{eventKafka.Key}_{DateTime.UtcNow.Ticks}";
                 
                 _eventFailureRepository.SaveMessageFailure(rocksKey, JsonSerializer.Serialize(eventKafka));
             }
@@ -81,6 +85,13 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
     public void Dispose()
     {
         _logger.LogInformation("Disposing Kafka Producer...");
+        int remainingQueueCount = _producer.Flush(TimeSpan.FromSeconds(60));
+
+        if (remainingQueueCount > 0)
+        {
+            _logger.LogInformation($"Flush timed out. {remainingQueueCount} messages left.");
+            _logger.LogInformation($"Messages failed were persisted.");
+        };
         _producer.Dispose();
     }
 }
