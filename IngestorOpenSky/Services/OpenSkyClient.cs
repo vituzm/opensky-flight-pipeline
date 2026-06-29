@@ -4,19 +4,23 @@ using System.Text.Json;
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 
 public class OpenSkyClient : IOpenSkyClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<OpenSkyClient> _logger;
-    
-    private const string OpenSkyUrl = "https://opensky-network.org/api/states/all";
-    
+    private readonly string _openSkyUrl;
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true};
     private readonly IHostEnvironment _env;
 
-    public OpenSkyClient(ILogger<OpenSkyClient> logger, IHttpClientFactory httpClientFactory, IHostEnvironment env)
+    public OpenSkyClient(
+        ILogger<OpenSkyClient> logger, 
+        IHttpClientFactory httpClientFactory, 
+        IHostEnvironment env,
+        IOptions<OpenSkyOptions> openSkyOptions)
     {
+        _openSkyUrl = openSkyOptions.Value.OpenSkyUrl;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _env = env;
@@ -64,7 +68,7 @@ public class OpenSkyClient : IOpenSkyClient
 
     private Uri BuildEndpoint(Dictionary<string, string?> parameters)
     {
-        var uri = QueryHelpers.AddQueryString(OpenSkyUrl, parameters);
+        var uri = QueryHelpers.AddQueryString(_openSkyUrl, parameters);
         return new Uri(uri);
     }
 

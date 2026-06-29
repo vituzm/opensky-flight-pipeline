@@ -1,25 +1,26 @@
 namespace IngestorOpenSky.Services;
 
-using System.Text.Json;
 using Confluent.Kafka;
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
+using IngestorOpenSky.Models.Config;
+using Microsoft.Extensions.Options;
 
 public class KafkaProducerService : IKafkaProducerService, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly ProducerConfig _config;
     private readonly ILogger<KafkaProducerService> _logger;
-    private readonly IEventFailureRepository _eventFailureRepository;
     
-    public KafkaProducerService(ILogger<KafkaProducerService> logger, IEventFailureRepository eventFailureRepository)
+    public KafkaProducerService(
+        ILogger<KafkaProducerService> logger, 
+        IOptions<KafkaOptions> kafkaOptions)
     {
         _logger = logger;
-        _eventFailureRepository = eventFailureRepository;
         _config = new ProducerConfig
             {
-                BootstrapServers = "localhost:9092,localhost:9094,localhost:9095",
-                MessageTimeoutMs = 5000
+                BootstrapServers = kafkaOptions.Value.BootstrapServers,
+                MessageTimeoutMs = kafkaOptions.Value.MessageTimeoutMs
             };
 
         _producer = new ProducerBuilder<string, string>(_config)
@@ -30,11 +31,15 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
             .Build();
     }
 
-    public void SendMessages(List<KafkaEvent> kafkaEvents)
+    public void SendMessages(
+        List<KafkaEvent> kafkaEvents,
+        Action<KafkaEvent> onSuccess,
+        Action<KafkaEvent> onError
+    )
     {
         foreach (var eventKafka in kafkaEvents)
         {
-            SendMessageAsync(eventKafka);
+            SendMessage(eventKafka, onSuccess, onError);
         }
 
     }
@@ -61,24 +66,16 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
         return kafkaHeaders;
     }
 
-    private void SendMessageAsync(KafkaEvent eventKafka)
+    public void SendMessage(
+        KafkaEvent eventKafka, 
+        Action<KafkaEvent> onSuccess, 
+        Action<KafkaEvent> onError)
     {
         var message = KafkaEventToMessage(eventKafka);
 
         _producer.Produce(eventKafka.Topic, message, (deliveryHandler) => {
-            if(deliveryHandler.Error.IsError)
-            {
-                _logger.LogError($"Error sending message to Kafka: {deliveryHandler.Error.Reason}");
-
-                string rocksKey = $"{eventKafka.Topic}_{eventKafka.Key}_{DateTime.UtcNow.Ticks}";
-                
-                _eventFailureRepository.SaveMessageFailure(rocksKey, JsonSerializer.Serialize(eventKafka));
-            }
-            else
-            {
-                _logger.LogInformation($"Message sent successfully to Kafka: {deliveryHandler.TopicPartitionOffset}");
-            
-            };
+            if(deliveryHandler.Error.IsError) onError(eventKafka);
+            else onSuccess(eventKafka);
         });
     }
 
