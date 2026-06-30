@@ -60,13 +60,15 @@ public class Worker : BackgroundService
                 List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros, "flight-data");
                 
                 var onSuccess = DeliveryHandlers.NoOp;
-                var onError   = (KafkaEvent e) => _eventFailureRepository.SaveMessageFailure(
-                                    $"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}",
-                                    JsonSerializer.Serialize(e));
+                var onError   = (KafkaEvent e) => 
+                    {
+                        _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.Serialize(e));
+                        _logger.LogError($"Failed to send message with key {e.Key} to topic {e.Topic}. Message saved for reprocessing.");
+                    };
 
                 _kafkaProducerService.SendMessages(kafkaEvents, onSuccess, onError);
 
-                _logger.LogInformation("Data ingestion completed. Press 's' for new request or 'q' to quit.");
+                _logger.LogInformation("Data ingestion completed. Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.");
             }
             else if (key.Key == ConsoleKey.R)
             {
@@ -83,8 +85,18 @@ public class Worker : BackgroundService
 
                 foreach (var (rocksKey, eventJson) in messageFailures)
                 {
-                    var onSuccess = (KafkaEvent e) => _eventFailureRepository.RemoveMessage(rocksKey);
-                    var onError   = DeliveryHandlers.NoOp;
+                    var onSuccess = (KafkaEvent e) => {
+                        _eventFailureRepository.RemoveMessage(rocksKey);
+                    };
+
+                    var onError   = (KafkaEvent e) => 
+                    {
+                        _logger.LogError($"""
+                            Failed to send message with key {e.Key} to topic {e.Topic}. Message remains in RocksDB for reprocessing.
+                            Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.
+                        """);
+                    };
+
                     var kafkaEvent = new KafkaEvent();
 
                     try
@@ -103,6 +115,7 @@ public class Worker : BackgroundService
                         _eventFailureRepository.RemoveMessage(rocksKey);
                         continue;
                     }
+
                     _kafkaProducerService.SendMessage(kafkaEvent, onSuccess, onError);
                 }
                 
