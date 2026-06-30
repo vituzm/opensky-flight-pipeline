@@ -1,4 +1,6 @@
 using IngestorOpenSky.Interfaces;
+using IngestorOpenSky.Models.Config;
+using Microsoft.Extensions.Options;
 using RocksDbSharp;
 
 namespace IngestorOpenSky.Services;
@@ -9,13 +11,14 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
     private readonly string _path;
     private RocksDb _db;
 
-    public EventFailureRepository()
+    public EventFailureRepository(IOptions<EventFailureRepositoryOptions> eventFailureRepositoryOptions)
     {
+        
         _options = new DbOptions()
             .SetCreateIfMissing(true)
             .IncreaseParallelism(Environment.ProcessorCount);
         
-        _path = Path.Combine(AppContext.BaseDirectory, "rocksdb_data");
+        _path = Path.Combine(AppContext.BaseDirectory, eventFailureRepositoryOptions.Value.BasePath);
         
         _db = RocksDb.Open(_options, _path);
     }

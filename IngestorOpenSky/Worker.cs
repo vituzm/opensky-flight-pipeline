@@ -44,31 +44,32 @@ public class Worker : BackgroundService
             {
                 _logger.LogInformation("Initializing data ingestion...");
 
-                var boundingBox = _openSkyOptions.Value.BoundingBox;
-                var dict_parametros = new Dictionary<string, string?>
+                try
                 {
-                    {"time", null},
-                    {"icao24", null},
-                    {"lamin", boundingBox.Lamin},
-                    {"lomin", boundingBox.Lomin},
-                    {"lamax", boundingBox.Lamax},
-                    {"lomax", boundingBox.Lomax},
-                    {"extended", "1"}
-                };
+                    var parameters = _openSkyOptions.Value.ToQueryDictionary();
 
-                OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(dict_parametros);
-                List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, dict_parametros, "flight-data");
-                
-                var onSuccess = DeliveryHandlers.NoOp;
-                var onError   = (KafkaEvent e) => 
+                    OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(parameters);
+                    List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, parameters, _openSkyOptions.Value.OpenSkyTopic);
+
+                    var onSuccess = DeliveryHandlers.NoOp;
+                    var onError = (KafkaEvent e) =>
                     {
                         _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.Serialize(e));
-                        _logger.LogError($"Failed to send message with key {e.Key} to topic {e.Topic}. Message saved for reprocessing.");
+                        _logger.LogError("Failed to send message with key {key} to topic {topic}. Saved for reprocessing.", e.Key, e.Topic);
                     };
 
-                _kafkaProducerService.SendMessages(kafkaEvents, onSuccess, onError);
+                    _kafkaProducerService.SendMessages(kafkaEvents, onSuccess, onError);
 
-                _logger.LogInformation("Data ingestion completed. Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.");
+                    _logger.LogInformation("Data ingestion completed. Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.");
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError("OpenSky API unavailable after all retries: {message}. Press 's' to try again.", ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Unexpected error during ingestion: {message}", ex.Message);
+                }
             }
             else if (key.Key == ConsoleKey.R)
             {

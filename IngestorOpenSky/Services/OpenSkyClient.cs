@@ -13,6 +13,8 @@ public class OpenSkyClient : IOpenSkyClient
     private readonly string _openSkyUrl;
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true};
     private readonly IHostEnvironment _env;
+    private readonly int _maxRetries;
+
 
     public OpenSkyClient(
         ILogger<OpenSkyClient> logger, 
@@ -24,6 +26,7 @@ public class OpenSkyClient : IOpenSkyClient
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _env = env;
+        _maxRetries = openSkyOptions.Value.MaxRetries;
     }
 
     public async Task<OpenSkyResponse> GetDataOpenSky(Dictionary<string, string?> parameters)
@@ -31,7 +34,7 @@ public class OpenSkyClient : IOpenSkyClient
         var client = _httpClientFactory.CreateClient();
         var endpoint = BuildEndpoint(parameters);
         
-        int maxAttempts = 3;
+        int maxAttempts = _maxRetries;
         TimeSpan delay = TimeSpan.FromSeconds(5); // Começa esperando 5 segundos
 
         for (int i = 1; i <= maxAttempts; i++)
