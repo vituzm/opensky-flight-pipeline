@@ -40,95 +40,96 @@ public class Worker : BackgroundService
         {
             var key = await Task.Run(() => Console.ReadKey(intercept: true), stoppingToken);
 
-            if (key.Key == ConsoleKey.S)
-            {
-                _logger.LogInformation("Initializing data ingestion...");
-
-                try
-                {
-                    var parameters = _openSkyOptions.Value.ToQueryDictionary();
-
-                    OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(parameters);
-                    List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, parameters, _openSkyOptions.Value.OpenSkyTopic);
-
-                    var onSuccess = DeliveryHandlers.NoOp;
-                    var onError = (KafkaEvent e) =>
-                    {
-                        _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.Serialize(e));
-                        _logger.LogError("Failed to send message with key {key} to topic {topic}. Saved for reprocessing.", e.Key, e.Topic);
-                    };
-
-                    _kafkaProducerService.SendMessages(kafkaEvents, onSuccess, onError);
-
-                    _logger.LogInformation("Data ingestion completed. Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.");
-                }
-                catch (HttpRequestException ex)
-                {
-                    _logger.LogError("OpenSky API unavailable after all retries: {message}. Press 's' to try again.", ex.Message);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Unexpected error during ingestion: {message}", ex.Message);
-                }
-            }
-            else if (key.Key == ConsoleKey.R)
-            {
-                
-                var messageFailures = _eventFailureRepository.GetAllMessageFailures();
-
-                _logger.LogInformation($"Reprocessing failed messages: {messageFailures.Count}...");
-
-                if (messageFailures.Count == 0)
-                {
-                    _logger.LogWarning("RocksDB is empty!");
-                    continue;
-                }
-
-                foreach (var (rocksKey, eventJson) in messageFailures)
-                {
-                    var onSuccess = (KafkaEvent e) => {
-                        _eventFailureRepository.RemoveMessage(rocksKey);
-                    };
-
-                    var onError   = (KafkaEvent e) => 
-                    {
-                        _logger.LogError($"""
-                            Failed to send message with key {e.Key} to topic {e.Topic}. Message remains in RocksDB for reprocessing.
-                            Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.
-                        """);
-                    };
-
-                    var kafkaEvent = new KafkaEvent();
-
-                    try
-                    {
-                        kafkaEvent = JsonSerializer.Deserialize<KafkaEvent>(eventJson);
-                        if (kafkaEvent == null)
-                        {
-                            _logger.LogWarning($"Message with key {rocksKey} deserialized to null.");
-                            _eventFailureRepository.RemoveMessage(rocksKey);
-                            continue;
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogError($"Failed to deserialize message with key {rocksKey}: {ex.Message}");
-                        _eventFailureRepository.RemoveMessage(rocksKey);
-                        continue;
-                    }
-
-                    _kafkaProducerService.SendMessage(kafkaEvent, onSuccess, onError);
-                }
-                
-
-                _logger.LogInformation("End of query. 's' for Ingestion, 'r' for Reload, 'q' for Exit.");
-            }
+            if (key.Key == ConsoleKey.S) await IngestDataAsync();
+            else if (key.Key == ConsoleKey.R) ReprocessData();
             else if (key.Key == ConsoleKey.Q)
             {
                 _logger.LogInformation("Shutting down worker...");
                 break;
             }
         }
+    }
+
+    private async Task IngestDataAsync()
+    {
+        _logger.LogInformation("Initializing data ingestion...");
+
+        try
+        {
+            var parameters = _openSkyOptions.Value.ToQueryDictionary();
+
+            OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(parameters);
+            List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, parameters, _openSkyOptions.Value.OpenSkyTopic);
+
+            var onSuccess = DeliveryHandlers.NoOp;
+            var onError = (KafkaEvent e) =>
+            {
+                _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.Serialize(e));
+                _logger.LogError("Failed to send message with key {key} to topic {topic}. Saved for reprocessing.", e.Key, e.Topic);
+            };
+
+            _kafkaProducerService.SendMessages(kafkaEvents, onSuccess, onError);
+
+            _logger.LogInformation("Data ingestion completed. Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError("OpenSky API unavailable after all retries: {message}. Press 's' to try again.", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Unexpected error during ingestion: {message}", ex.Message);
+        }
+    }
+
+    private void ReprocessData()
+    {
+        var messageFailures = _eventFailureRepository.GetAllMessageFailures();
+
+        _logger.LogInformation($"Reprocessing failed messages: {messageFailures.Count}...");
+
+        if (messageFailures.Count == 0)
+        {
+            _logger.LogWarning("RocksDB is empty!");
+            return;
+        }
+
+        foreach (var (rocksKey, eventJson) in messageFailures)
+        {
+            var onSuccess = (KafkaEvent e) => {
+                _eventFailureRepository.RemoveMessage(rocksKey);
+            };
+
+            var onError   = (KafkaEvent e) => 
+            {
+                _logger.LogError($"""
+                    Failed to send message with key {e.Key} to topic {e.Topic}. Message remains in RocksDB for reprocessing.
+                    Press 's' for new request, 'r' to reprocess failed messages, or 'q' to quit.
+                """);
+            };
+
+            var kafkaEvent = new KafkaEvent();
+
+            try
+            {
+                kafkaEvent = JsonSerializer.Deserialize<KafkaEvent>(eventJson);
+                if (kafkaEvent == null)
+                {
+                    _logger.LogWarning($"Message with key {rocksKey} deserialized to null.");
+                    _eventFailureRepository.RemoveMessage(rocksKey);
+                    continue;
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError($"Failed to deserialize message with key {rocksKey}: {ex.Message}");
+                _eventFailureRepository.RemoveMessage(rocksKey);
+                continue;
+            }
+
+            _kafkaProducerService.SendMessage(kafkaEvent, onSuccess, onError);
+        }
+        _logger.LogInformation("End of query. 's' for Ingestion, 'r' for Reload, 'q' for Exit.");
     }
     
 }
