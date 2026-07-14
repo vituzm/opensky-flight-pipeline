@@ -11,6 +11,7 @@ services:
         max-size: "10m"  # Each file will have at most 10MB
         max-file: "3"    # Only the last 3 files will be kept (total 30MB)
     environment:
+      KAFKA_BROKER_RACK: "rack-1"
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller' # Broker and controller roles
       # Internal communication protocols
@@ -26,7 +27,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       # __consumer_offsets: internal kafka topic that stores consumer group read offsets.
-      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 3 # Default is 50
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 2 # Default is 50
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       # Minimum number of replicas that must acknowledge a transaction before it is considered successful.
@@ -38,7 +39,7 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3 # Quantity of replicas for the partitions in this broker
       
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
+      CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
       
 
   kafka-2:
@@ -53,6 +54,7 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
+      KAFKA_BROKER_RACK: "rack-2"
       KAFKA_NODE_ID: 2
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
@@ -69,7 +71,7 @@ services:
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
+      CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
 
 
   kafka-3:
@@ -84,6 +86,7 @@ services:
         max-size: "10m"
         max-file: "3"
     environment:
+      KAFKA_BROKER_RACK: "rack-3"
       KAFKA_NODE_ID: 3
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
@@ -100,7 +103,7 @@ services:
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
+      CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
 
   schema-registry: # Future use for Avro or Protobuf schema validation.
     image: confluentinc/cp-schema-registry:7.6.0
@@ -130,6 +133,7 @@ services:
     ports:
       - "9021:9021"
     environment:
+      CONTROL_CENTER_STREAMS_RACK_AWARE_ASSIGNMENT_STRATEGY: "none"
       CONTROL_CENTER_BOOTSTRAP_SERVERS: 'kafka-1:29092,kafka-2:29092,kafka-3:29092'
       CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       CONTROL_CENTER_REPLICATION_FACTOR: 3
