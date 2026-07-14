@@ -2,38 +2,41 @@ services:
   kafka-1:
     image: confluentinc/cp-kafka:7.6.0
     hostname: kafka-1
-    container_name: kafka-1 # é colocado para evitar o default
+    container_name: kafka-1
     ports:
       - "9092:9092"
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"  # Cada arquivo de log terá no máximo 10MB
-        max-file: "3"    # O Docker manterá apenas os 3 últimos arquivos (total 30MB)
+        max-size: "10m"  # Each file will have at most 10MB
+        max-file: "3"    # Only the last 3 files will be kept (total 30MB)
     environment:
-      KAFKA_NODE_ID: 1 # ID único para cada broker
-      KAFKA_PROCESS_ROLES: 'broker,controller' # Broker atuara como controller tbm se necessário
-      # Configurações para listeners e comunicação entre brokers
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller' # Broker and controller roles
+      # Internal communication protocols
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      # Voters caso haja falha de um controller
+      # If the controller goes down the other brokers will elect a new controller from the remaining brokers.
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093' 
-      # PLAINTEXT Servirá para comunicação interna entre brokers
-      # CONTROLLER para comunicação de controle
-      # PLAINTEXT_HOST para clientes externos
+      # PLAINTEXT internal communication between brokers
+      # PLAINTEXT_HOST external consumers
       KAFKA_LISTENERS: 'PLAINTEXT://:29092,CONTROLLER://:9093,PLAINTEXT_HOST://:9092'
-      # Caso algum serviço externo pergunte pelo endereço do broker, ele deve usar o PLAINTEXT_HOST
-      # Caso seja interno usa o PLAINTEXT
+      # If any service asks the broker address, he must use the PLAINTEXT_HOST
+      # For dev it is used as plain text
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-1:29092,PLAINTEXT_HOST://localhost:9092'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      # __consumer_offsets: tópico interno do Kafka para gerenciar os offsets dos consumidores, deve ter replicação alta para garantir disponibilidade
+      # __consumer_offsets: internal kafka topic that stores consumer group read offsets.
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 3 # Default is 50
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      # Númeor mínimo de réplicas que devem confirmar que receberam o dado para a transação ser considerada válida.
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      # Define a replicação para o log de transações
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
-      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 2
+      # Minimum number of replicas that must acknowledge a transaction before it is considered successful.
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2 # 1 is the minum number 
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3 #Number of replicas for the transaction state log topic.
+      
+      # Default value for the number of partition to create when a topic is created without specifying the number of partitions.
+      KAFKA_NUM_PARTITIONS: 3 # https://docs.confluent.io/platform/current/installation/configuration/broker-configs.html#num-partitions
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3 # Quantity of replicas for the partitions in this broker
+      
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
       
@@ -59,9 +62,15 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 2
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
+
 
   kafka-3:
     image: confluentinc/cp-kafka:7.6.0
@@ -84,11 +93,16 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 2
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJDRDRCMz'
 
-  schema-registry:
+  schema-registry: # Future use for Avro or Protobuf schema validation.
     image: confluentinc/cp-schema-registry:7.6.0
     hostname: schema-registry
     container_name: schema-registry
@@ -101,7 +115,7 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka-1:29092,kafka-2:29092,kafka-3:29092'
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081 # Para conexão com o control-center
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081 # For connection with the control-center
       SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: 'WARN'
 
   control-center:
