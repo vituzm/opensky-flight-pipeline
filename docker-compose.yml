@@ -1,6 +1,9 @@
+# https://docs.confluent.io/platform/current/installation/docker/config-reference.html#ak-configuration
+# https://docs.confluent.io/platform/current/installation/docker/image-reference.html
+
 services:
   kafka-1:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-server:7.6.0 # CP-Server for the confluent broker metrics
     hostname: kafka-1
     container_name: kafka-1
     ports:
@@ -40,10 +43,16 @@ services:
       
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
+
+      # Confluent metrics reporter configuration https://docs.confluent.io/platform/7.6/kafka/metrics-reporter.html
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:29092,kafka-2:29092,kafka-3:29092"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_RETENTION_MS: 600000
+
       
 
   kafka-2:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-server:7.6.0
     hostname: kafka-2
     container_name: kafka-2
     ports:
@@ -72,10 +81,12 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
-
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:29092,kafka-2:29092,kafka-3:29092"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_RETENTION_MS: 600000
 
   kafka-3:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-server:7.6.0
     hostname: kafka-3
     container_name: kafka-3
     ports:
@@ -104,6 +115,9 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_LOG4J_ROOT_LOGGER_LEVEL: 'WARN'
       CLUSTER_ID: 'TUnQLj3xQsyJWR4FBjoLHQ'
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:29092,kafka-2:29092,kafka-3:29092"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_RETENTION_MS: 600000
 
   schema-registry: # Future use for Avro or Protobuf schema validation.
     image: confluentinc/cp-schema-registry:7.6.0
