@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace IngestorOpenSky.Models;
 public class FlightState
 {
@@ -22,48 +20,4 @@ public class FlightState
     public int PositionSource { get; set; }
     public int Category { get; set; }
 
-    public static FlightState MapArrayFlightState(object?[] data)
-    {
-        return new FlightState
-        {
-            Icao24 = data[0]?.ToString() ?? string.Empty,
-            Callsign = data[1]?.ToString()?.Trim() ?? string.Empty,
-            OriginCountry = data[2]?.ToString() ?? string.Empty,
-            
-            TimePosition = ParseInt(data[3]),
-            LastContact = ParseInt(data[4]),
-            
-            Longitude = ParseFloat(data[5]),
-            Latitude = ParseFloat(data[6]),
-            BaroAltitude = ParseFloat(data[7]),
-            
-            OnGround = data[8]?.ToString()?.ToLower() == "true",
-            
-            Velocity = ParseFloat(data[9]),
-            TrueTrack = ParseFloat(data[10]),
-            VerticalRate = ParseFloat(data[11]),
-            
-            Sensors = data[12] is JsonElement jsonElement
-                ? JsonSerializer.Deserialize<int[]>(jsonElement.GetRawText())
-                : null, 
-            
-            GeoAltitude = ParseFloat(data[13]),
-            Squawk = data[14]?.ToString(),
-            Spi = data[15]?.ToString()?.ToLower() == "true",
-            
-            PositionSource = ParseInt(data[16]) ?? 0,
-            Category = ParseInt(data[17]) ?? 0
-        };
-    }
-
-    private static float? ParseFloat(object? value) =>
-        float.TryParse(value?.ToString(), out float result) ? result : null;
-
-    private static int? ParseInt(object? value) =>
-        int.TryParse(value?.ToString(), out int result) ? result : null;
-
-    public override string ToString()
-    {
-        return $"FlightState(Icao24={Icao24}, Callsign={Callsign}, OriginCountry={OriginCountry}, TimePosition={TimePosition}, LastContact={LastContact}, Longitude={Longitude}, Latitude={Latitude}, BaroAltitude={BaroAltitude}, OnGround={OnGround}, Velocity={Velocity}, TrueTrack={TrueTrack}, VerticalRate={VerticalRate}, Sensors=[{string.Join(", ", Sensors ?? new int[0])}], GeoAltitude={GeoAltitude}, Squawk={Squawk}, Spi={Spi}, PositionSource={PositionSource}, Category={Category})";
-    }
 }

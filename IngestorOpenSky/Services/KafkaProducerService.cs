@@ -14,14 +14,10 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
     
     public KafkaProducerService(
         ILogger<KafkaProducerService> logger, 
-        IOptions<KafkaOptions> kafkaOptions)
+        IOptions<ProducerConfig> kafkaOptions)
     {
         _logger = logger;
-        _config = new ProducerConfig
-            {
-                BootstrapServers = kafkaOptions.Value.BootstrapServers,
-                MessageTimeoutMs = kafkaOptions.Value.MessageTimeoutMs
-            };
+        _config = kafkaOptions.Value;
 
         _producer = new ProducerBuilder<string, string>(_config)
             .SetLogHandler((_, logMessage) => 

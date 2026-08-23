@@ -1,30 +1,33 @@
 namespace IngestorOpenSky.Models;
 using IngestorOpenSky.Interfaces;
 using System.Text;
+using System.Text.Json;
 
 class OpenSkyDataMapper : IOpenSkyDataMapper
 {
     public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters, string topic)
     {
 
-        List<KafkaEvent> eventos = new List<KafkaEvent>(); 
-        var dicionarioHeader = BuildHeaders(response.Time.ToString(), parameters);
+        List<KafkaEvent> events = new List<KafkaEvent>(); 
+        var headerDict = BuildHeaders(response.Time.ToString(), parameters);
 
-        foreach (var voo in response.States)
+
+        foreach (var rawFlight in response.StatesRaw ?? [])
         {
-            var vooString = SerializeFlight(voo);
+            var flight = MapArrayFlightState(rawFlight);
+
             var kafkaEvent = new KafkaEvent
             {
                 Topic = topic,
-                Key = voo.Icao24, // ID from the plane
-                Value = vooString,
-                Headers = dicionarioHeader
+                Key = flight.Icao24, // ID from the plane
+                Value = JsonSerializer.Serialize(flight),
+                Headers = headerDict
             };
 
-            eventos.Add(kafkaEvent);
+            events.Add(kafkaEvent);
         }
 
-        return eventos;
+        return events;
     }
 
     
@@ -47,9 +50,43 @@ class OpenSkyDataMapper : IOpenSkyDataMapper
         return headers;
     }
 
-    private static string SerializeFlight(FlightState voo)
+    private static FlightState MapArrayFlightState(object?[] data)
     {
-        return System.Text.Json.JsonSerializer.Serialize(voo);
+        return new FlightState
+        {
+            Icao24 = data[0]?.ToString() ?? string.Empty,
+            Callsign = data[1]?.ToString()?.Trim() ?? string.Empty,
+            OriginCountry = data[2]?.ToString() ?? string.Empty,
+            
+            TimePosition = ParseInt(data[3]),
+            LastContact = ParseInt(data[4]),
+            
+            Longitude = ParseFloat(data[5]),
+            Latitude = ParseFloat(data[6]),
+            BaroAltitude = ParseFloat(data[7]),
+            
+            OnGround = data[8]?.ToString()?.ToLower() == "true",
+            
+            Velocity = ParseFloat(data[9]),
+            TrueTrack = ParseFloat(data[10]),
+            VerticalRate = ParseFloat(data[11]),
+            
+            Sensors = data[12] is JsonElement jsonElement
+                ? JsonSerializer.Deserialize<int[]>(jsonElement.GetRawText())
+                : null, 
+            
+            GeoAltitude = ParseFloat(data[13]),
+            Squawk = data[14]?.ToString(),
+            Spi = data[15]?.ToString()?.ToLower() == "true",
+            
+            PositionSource = ParseInt(data[16]) ?? 0,
+            Category = ParseInt(data[17]) ?? 0
+        };
     }
 
+    private static float? ParseFloat(object? value) =>
+        float.TryParse(value?.ToString(), out float result) ? result : null;
+
+    private static int? ParseInt(object? value) =>
+        int.TryParse(value?.ToString(), out int result) ? result : null;
 }

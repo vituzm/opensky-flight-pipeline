@@ -10,10 +10,9 @@ public class OpenSkyClient : IOpenSkyClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<OpenSkyClient> _logger;
-    private readonly string _openSkyUrl;
+    private readonly OpenSkyOptions _config;
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true};
     private readonly IHostEnvironment _env;
-    private readonly int _maxRetries;
 
 
     public OpenSkyClient(
@@ -22,11 +21,10 @@ public class OpenSkyClient : IOpenSkyClient
         IHostEnvironment env,
         IOptions<OpenSkyOptions> openSkyOptions)
     {
-        _openSkyUrl = openSkyOptions.Value.OpenSkyUrl;
+        _config = openSkyOptions.Value;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _env = env;
-        _maxRetries = openSkyOptions.Value.MaxRetries;
     }
 
     public async Task<OpenSkyResponse> GetDataOpenSky(Dictionary<string, string?> parameters)
@@ -34,7 +32,7 @@ public class OpenSkyClient : IOpenSkyClient
         var client = _httpClientFactory.CreateClient();
         var endpoint = BuildEndpoint(parameters);
         
-        int maxAttempts = _maxRetries;
+        int maxAttempts = _config.MaxRetries;
         TimeSpan delay = TimeSpan.FromSeconds(5); // Começa esperando 5 segundos
 
         for (int i = 1; i <= maxAttempts; i++)
@@ -46,8 +44,8 @@ public class OpenSkyClient : IOpenSkyClient
                 ValidateReponse(response);
 
                 var apiResponse = await ProcessResponse(response);
-                
-                LogDetalhesDev(parameters, response, apiResponse.States.Count, apiResponse.Time);
+
+                LogDetalhesDev(parameters, response, apiResponse);
                 
                 return apiResponse;
             }
@@ -71,7 +69,7 @@ public class OpenSkyClient : IOpenSkyClient
 
     private Uri BuildEndpoint(Dictionary<string, string?> parameters)
     {
-        var uri = QueryHelpers.AddQueryString(_openSkyUrl, parameters);
+        var uri = QueryHelpers.AddQueryString(_config.OpenSkyUrl, parameters);
         return new Uri(uri);
     }
 
@@ -99,17 +97,15 @@ public class OpenSkyClient : IOpenSkyClient
             return apiResponse ?? new OpenSkyResponse();
         }
 
-        // Mapeamento
-        apiResponse.States = apiResponse.StatesRaw
-            .Select(FlightState.MapArrayFlightState)
-            .ToList();
-
         return apiResponse;
     }
 
-    private void LogDetalhesDev(Dictionary<string, string?> parameters, HttpResponseMessage response, int count, int time)
+    private void LogDetalhesDev(Dictionary<string, string?> parameters, HttpResponseMessage response, OpenSkyResponse apiResponse)
     {
         if (!_env.IsDevelopment()) return;
+
+        int count = apiResponse?.StatesRaw?.Count ?? 0;
+        int time = apiResponse?.Time ?? 0;
 
         // Formata os parâmetros do dicionário
         var paramsFormatados = string.Join("\n    ", parameters.Select(p => $"{p.Key}: {p.Value ?? "null"}"));
