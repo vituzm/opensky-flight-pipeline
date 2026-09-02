@@ -1,5 +1,5 @@
 namespace IngestorOpenSky.Models;
-public class FlightState
+public class DEPRECIADOFlightState
 {
     public string Icao24 { get; set; } = string.Empty;
     public string Callsign { get; set; } = string.Empty;

@@ -1,26 +1,40 @@
 namespace IngestorOpenSky.Models;
+
+using Confluent.Kafka;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using IngestorOpenSky.Interfaces;
 using System.Text;
 using System.Text.Json;
 
 class OpenSkyDataMapper : IOpenSkyDataMapper
-{
-    public List<KafkaEvent> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters, string topic)
+{   
+    private ProtobufSerializer<FlightState> _protobufSerializer;
+
+    public OpenSkyDataMapper(ISchemaRegistryClient schemaRegistry)
+    {
+        _protobufSerializer = new(schemaRegistry);
+    }
+
+
+    public async Task<List<KafkaEvent>> MapToKafkaEvents(OpenSkyResponse response, Dictionary<string, string?> parameters, string topic)
     {
 
         List<KafkaEvent> events = new List<KafkaEvent>(); 
         var headerDict = BuildHeaders(response.Time.ToString(), parameters);
-
+        var serializationContext = new SerializationContext(MessageComponentType.Value, topic);
 
         foreach (var rawFlight in response.StatesRaw ?? [])
         {
-            var flight = MapArrayFlightState(rawFlight);
+            FlightState flight = MapArrayFlightState(rawFlight);
+            
+            byte[] serializedFlight =  await _protobufSerializer.SerializeAsync(flight, serializationContext); // Serialização protobuf
 
             var kafkaEvent = new KafkaEvent
             {
                 Topic = topic,
                 Key = flight.Icao24, // ID from the plane
-                Value = JsonSerializer.Serialize(flight),
+                Value = serializedFlight,
                 Headers = headerDict
             };
 
@@ -52,7 +66,7 @@ class OpenSkyDataMapper : IOpenSkyDataMapper
 
     private static FlightState MapArrayFlightState(object?[] data)
     {
-        return new FlightState
+        FlightState flight = new FlightState
         {
             Icao24 = data[0]?.ToString() ?? string.Empty,
             Callsign = data[1]?.ToString()?.Trim() ?? string.Empty,
@@ -71,9 +85,7 @@ class OpenSkyDataMapper : IOpenSkyDataMapper
             TrueTrack = ParseFloat(data[10]),
             VerticalRate = ParseFloat(data[11]),
             
-            Sensors = data[12] is JsonElement jsonElement
-                ? JsonSerializer.Deserialize<int[]>(jsonElement.GetRawText())
-                : null, 
+            // Sensors = AddRange(data[12]),
             
             GeoAltitude = ParseFloat(data[13]),
             Squawk = data[14]?.ToString(),
@@ -82,6 +94,19 @@ class OpenSkyDataMapper : IOpenSkyDataMapper
             PositionSource = ParseInt(data[16]) ?? 0,
             Category = ParseInt(data[17]) ?? 0
         };
+
+
+        // Preenche os sensores com segurança apenas se o campo existir e for um array válido // Temos que adicionar os elementos depois da lista ser iniciada
+        if (data[12] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+        {
+            var sensors = JsonSerializer.Deserialize<int?[]>(jsonElement.GetRawText());
+            if (sensors != null && sensors.Length > 0)
+            {
+                flight.Sensors.AddRange(sensors);
+            }
+        }
+
+        return flight;
     }
 
     private static float? ParseFloat(object? value) =>

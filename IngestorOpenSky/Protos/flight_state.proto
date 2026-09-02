@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "IngestorOpenSky.Models";
+
+message FlightState {
+    string icao24 = 1;
+    string callsign = 2;
+    string origin_country = 3;
+    google.protobuf.Int32Value time_position = 4;
+    google.protobuf.Int32Value last_contact = 5;
+    google.protobuf.FloatValue longitude = 6;
+    google.protobuf.FloatValue latitude = 7;
+    google.protobuf.FloatValue baro_altitude = 8;
+    bool on_ground = 9;
+    google.protobuf.FloatValue velocity = 10;
+    google.protobuf.FloatValue true_track = 11;
+    google.protobuf.FloatValue vertical_rate = 12;
+    repeated google.protobuf.Int32Value sensors = 13;
+    google.protobuf.FloatValue geo_altitude = 14;
+    google.protobuf.StringValue squawk = 15;
+    bool spi = 16;
+    int32 position_source = 17;
+    int32 category = 18;
+}  
+
+// https://learn.microsoft.com/en-us/aspnet/core/grpc/protobuf?view=aspnetcore-10.0#scalar-value-types

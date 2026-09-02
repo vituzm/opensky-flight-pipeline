@@ -59,12 +59,12 @@ public class Worker : BackgroundService
             var parameters = _openSkyOptions.Value.ToQueryDictionary();
 
             OpenSkyResponse response = await _openSkyClient.GetDataOpenSky(parameters);
-            List<KafkaEvent> kafkaEvents = _flightDataMapper.MapToKafkaEvents(response, parameters, _openSkyOptions.Value.OpenSkyTopic);
+            List<KafkaEvent> kafkaEvents = await _flightDataMapper.MapToKafkaEvents(response, parameters, _openSkyOptions.Value.OpenSkyTopic);
 
             var onSuccess = DeliveryHandlers.NoOp;
             var onError = (KafkaEvent e) =>
             {
-                _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.Serialize(e));
+                _eventFailureRepository.SaveMessageFailure($"{e.Topic}_{e.Key}_{DateTime.UtcNow.Ticks}", JsonSerializer.SerializeToUtf8Bytes(e));
                 _logger.LogError("Failed to send message with key {key} to topic {topic}. Saved for reprocessing.", e.Key, e.Topic);
             };
 

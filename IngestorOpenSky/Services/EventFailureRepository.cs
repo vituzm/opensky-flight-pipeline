@@ -1,6 +1,7 @@
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models.Config;
 using Microsoft.Extensions.Options;
+using System.Text;
 using RocksDbSharp;
 
 namespace IngestorOpenSky.Services;
@@ -23,21 +24,21 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
         _db = RocksDb.Open(_options, _path);
     }
 
-    public void SaveMessageFailure(string key, string values)
+    public void SaveMessageFailure(string key, byte[] values)
     {
-        _db.Put(key, values);
+        _db.Put(Encoding.UTF8.GetBytes(key), values);
     }
 
 
-    public Dictionary<string, string> GetAllMessageFailures()
+    public Dictionary<string, byte[]> GetAllMessageFailures()
     {
-        var failedMessages = new Dictionary<string, string>(); 
+        var failedMessages = new Dictionary<string, byte[]>(); 
 
         using var iterator = _db.NewIterator();
         
         for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
         {
-            failedMessages.Add(iterator.StringKey(), iterator.StringValue());
+            failedMessages.Add(iterator.StringKey(), iterator.Value()); // Faz a conversão automáticamente em key
         }
 
         return failedMessages;

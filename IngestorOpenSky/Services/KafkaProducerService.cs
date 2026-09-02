@@ -3,28 +3,18 @@ namespace IngestorOpenSky.Services;
 using Confluent.Kafka;
 using IngestorOpenSky.Interfaces;
 using IngestorOpenSky.Models;
-using IngestorOpenSky.Models.Config;
-using Microsoft.Extensions.Options;
 
 public class KafkaProducerService : IKafkaProducerService, IDisposable
 {
-    private readonly IProducer<string, string> _producer;
-    private readonly ProducerConfig _config;
+    private readonly IProducer<string, byte[]> _producer;
     private readonly ILogger<KafkaProducerService> _logger;
     
     public KafkaProducerService(
         ILogger<KafkaProducerService> logger, 
-        IOptions<ProducerConfig> kafkaOptions)
+        IProducer<string, byte[]> producer)
     {
         _logger = logger;
-        _config = kafkaOptions.Value;
-
-        _producer = new ProducerBuilder<string, string>(_config)
-            .SetLogHandler((_, logMessage) => 
-            {
-                
-            })
-            .Build();
+        _producer = producer;
     }
 
     public void SendMessages(
@@ -40,9 +30,9 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
 
     }
 
-    private Message<string, string> KafkaEventToMessage(KafkaEvent eventoKafka)
+    private Message<string, byte[]> KafkaEventToMessage(KafkaEvent eventoKafka)
     {
-        var message = new Message<string, string>
+        var message = new Message<string, byte[]>
         {
             Key = eventoKafka.Key,
             Value = eventoKafka.Value,
