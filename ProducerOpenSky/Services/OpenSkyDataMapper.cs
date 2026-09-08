@@ -1,9 +1,9 @@
-namespace IngestorOpenSky.Models;
+namespace ProducerOpenSky.Models;
 
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using IngestorOpenSky.Interfaces;
+using ProducerOpenSky.Interfaces;
 using System.Text;
 using System.Text.Json;
 

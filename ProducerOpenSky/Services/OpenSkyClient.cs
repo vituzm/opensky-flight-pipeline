@@ -1,8 +1,8 @@
-namespace IngestorOpenSky.Services;
+namespace ProducerOpenSky.Services;
 
 using System.Text.Json;
-using IngestorOpenSky.Interfaces;
-using IngestorOpenSky.Models;
+using ProducerOpenSky.Interfaces;
+using ProducerOpenSky.Models;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 

@@ -5,7 +5,7 @@
     <RollForward>LatestMajor</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-IngestorOpenSky-ca3b749a-93dc-4b86-ac89-0cfd8cb53375</UserSecretsId>
+    <UserSecretsId>dotnet-ProducerOpenSky-ca3b749a-93dc-4b86-ac89-0cfd8cb53375</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

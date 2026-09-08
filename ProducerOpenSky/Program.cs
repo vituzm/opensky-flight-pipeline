@@ -1,8 +1,8 @@
-using IngestorOpenSky;
-using IngestorOpenSky.Interfaces;
-using IngestorOpenSky.Services;
-using IngestorOpenSky.Models;
-using IngestorOpenSky.Models.Config;
+using ProducerOpenSky;
+using ProducerOpenSky.Interfaces;
+using ProducerOpenSky.Services;
+using ProducerOpenSky.Models;
+using ProducerOpenSky.Models.Config;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Microsoft.Extensions.Options;

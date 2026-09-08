@@ -1,4 +1,4 @@
-namespace IngestorOpenSky.Models;
+namespace ProducerOpenSky.Models;
 public class DEPRECIADOFlightState
 {
     public string Icao24 { get; set; } = string.Empty;

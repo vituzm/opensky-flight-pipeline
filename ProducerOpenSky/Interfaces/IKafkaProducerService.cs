@@ -1,6 +1,6 @@
-using IngestorOpenSky.Models;
+using ProducerOpenSky.Models;
 
-namespace IngestorOpenSky.Interfaces;
+namespace ProducerOpenSky.Interfaces;
 
 public interface IKafkaProducerService
 {

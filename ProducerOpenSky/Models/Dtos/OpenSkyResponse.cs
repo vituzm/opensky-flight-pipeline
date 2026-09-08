@@ -1,6 +1,9 @@
 using System.Text.Json.Serialization;
 
-using IngestorOpenSky.Models;  
+using ProducerOpenSky.Models;
+
+namespace ProducerOpenSky.Models;
+
 public class OpenSkyResponse
 {
     [JsonPropertyName("time")]

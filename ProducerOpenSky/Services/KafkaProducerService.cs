@@ -1,8 +1,8 @@
-namespace IngestorOpenSky.Services;
+namespace ProducerOpenSky.Services;
 
 using Confluent.Kafka;
-using IngestorOpenSky.Interfaces;
-using IngestorOpenSky.Models;
+using ProducerOpenSky.Interfaces;
+using ProducerOpenSky.Models;
 
 public class KafkaProducerService : IKafkaProducerService, IDisposable
 {

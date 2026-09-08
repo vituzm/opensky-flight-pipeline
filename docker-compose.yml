@@ -13,6 +13,12 @@ services:
       options:
         max-size: "10m"  # Each file will have at most 10MB
         max-file: "3"    # Only the last 3 files will be kept (total 30MB)
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
     environment:
       KAFKA_BROKER_RACK: "rack-1"
       KAFKA_NODE_ID: 1
@@ -65,6 +71,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
     environment:
       KAFKA_BROKER_RACK: "rack-2"
       KAFKA_NODE_ID: 2
@@ -100,6 +112,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
     environment:
       KAFKA_BROKER_RACK: "rack-3"
       KAFKA_NODE_ID: 3
@@ -129,9 +147,12 @@ services:
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
-      - kafka-1
-      - kafka-2
-      - kafka-3
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      kafka-3:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:

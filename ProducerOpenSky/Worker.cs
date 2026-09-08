@@ -1,10 +1,10 @@
 
 using System.Text.Json;
-using IngestorOpenSky.Interfaces;
-using IngestorOpenSky.Models;
+using ProducerOpenSky.Interfaces;
+using ProducerOpenSky.Models;
 using Microsoft.Extensions.Options;
 
-namespace IngestorOpenSky;
+namespace ProducerOpenSky;
 
 public class Worker : BackgroundService
 {
@@ -16,9 +16,9 @@ public class Worker : BackgroundService
     private readonly IOptions<OpenSkyOptions> _openSkyOptions;
 
     public Worker(
-        ILogger<Worker> logger, 
-        IOpenSkyClient openSkyClient, 
-        IOpenSkyDataMapper flightDataMapper, 
+        ILogger<Worker> logger,
+        IOpenSkyClient openSkyClient,
+        IOpenSkyDataMapper flightDataMapper,
         IKafkaProducerService kafkaProducerService,
         IEventFailureRepository eventFailureRepository,
         IOptions<OpenSkyOptions> openSkyOptions
@@ -94,13 +94,14 @@ public class Worker : BackgroundService
             return;
         }
 
-        foreach (var (rocksKey, eventJson) in messageFailures)
+        foreach (var (rocksKey, messageValue) in messageFailures)
         {
-            var onSuccess = (KafkaEvent e) => {
+            var onSuccess = (KafkaEvent e) =>
+            {
                 _eventFailureRepository.RemoveMessage(rocksKey);
             };
 
-            var onError   = (KafkaEvent e) => 
+            var onError = (KafkaEvent e) =>
             {
                 _logger.LogError($"""
                     Failed to send message with key {e.Key} to topic {e.Topic}. Message remains in RocksDB for reprocessing.
@@ -112,7 +113,7 @@ public class Worker : BackgroundService
 
             try
             {
-                kafkaEvent = JsonSerializer.Deserialize<KafkaEvent>(eventJson);
+                kafkaEvent = JsonSerializer.Deserialize<KafkaEvent>(messageValue);
                 if (kafkaEvent == null)
                 {
                     _logger.LogWarning($"Message with key {rocksKey} deserialized to null.");
@@ -131,5 +132,5 @@ public class Worker : BackgroundService
         }
         _logger.LogInformation("End of query. 's' for Ingestion, 'r' for Reload, 'q' for Exit.");
     }
-    
+
 }

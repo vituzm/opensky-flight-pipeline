@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/wrappers.proto";
 
-option csharp_namespace = "IngestorOpenSky.Models";
+option csharp_namespace = "ProducerOpenSky.Models";
 
 message FlightState {
     string icao24 = 1;

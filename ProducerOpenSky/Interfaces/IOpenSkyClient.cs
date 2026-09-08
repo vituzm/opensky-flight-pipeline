@@ -1,4 +1,6 @@
-namespace IngestorOpenSky.Interfaces;
+namespace ProducerOpenSky.Interfaces;
+
+using ProducerOpenSky.Models;
 
 public interface IOpenSkyClient
 {

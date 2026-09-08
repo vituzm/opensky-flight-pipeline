@@ -1,4 +1,4 @@
-namespace IngestorOpenSky.Models.Config;
+namespace ProducerOpenSky.Models.Config;
 
 public class KafkaOptions
 {

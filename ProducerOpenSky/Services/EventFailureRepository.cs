@@ -1,10 +1,10 @@
-using IngestorOpenSky.Interfaces;
-using IngestorOpenSky.Models.Config;
+using ProducerOpenSky.Interfaces;
+using ProducerOpenSky.Models.Config;
 using Microsoft.Extensions.Options;
 using System.Text;
 using RocksDbSharp;
 
-namespace IngestorOpenSky.Services;
+namespace ProducerOpenSky.Services;
 
 class EventFailureRepository : IEventFailureRepository, IDisposable
 {
@@ -14,13 +14,13 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
 
     public EventFailureRepository(IOptions<EventFailureRepositoryOptions> eventFailureRepositoryOptions)
     {
-        
+
         _options = new DbOptions()
             .SetCreateIfMissing(true)
             .IncreaseParallelism(Environment.ProcessorCount);
-        
+
         _path = Path.Combine(AppContext.BaseDirectory, eventFailureRepositoryOptions.Value.BasePath);
-        
+
         _db = RocksDb.Open(_options, _path);
     }
 
@@ -32,10 +32,10 @@ class EventFailureRepository : IEventFailureRepository, IDisposable
 
     public Dictionary<string, byte[]> GetAllMessageFailures()
     {
-        var failedMessages = new Dictionary<string, byte[]>(); 
+        var failedMessages = new Dictionary<string, byte[]>();
 
         using var iterator = _db.NewIterator();
-        
+
         for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
         {
             failedMessages.Add(iterator.StringKey(), iterator.Value()); // Faz a conversão automáticamente em key

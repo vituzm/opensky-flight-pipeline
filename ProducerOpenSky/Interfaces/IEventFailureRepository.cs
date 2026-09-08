@@ -1,4 +1,4 @@
-namespace IngestorOpenSky.Interfaces;
+namespace ProducerOpenSky.Interfaces;
 public interface IEventFailureRepository
 {
     void SaveMessageFailure(string key, byte[] value);

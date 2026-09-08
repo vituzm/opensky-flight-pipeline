@@ -1,4 +1,4 @@
-namespace IngestorOpenSky.Models;
+namespace ProducerOpenSky.Models;
 
 public class KafkaEvent
 {
