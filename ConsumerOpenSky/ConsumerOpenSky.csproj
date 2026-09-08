@@ -11,10 +11,12 @@
     <PackageReference Include="Confluent.Kafka" Version="2.15.0" />
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Protobuf" Version="2.15.0" />
     <PackageReference Include="Google.Protobuf" Version="3.36.1" />
+    <PackageReference Include="protobuf-net.Reflection" Version="3.4.21" />
     <PackageReference Include="Grpc.Tools" Version="2.83.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <Protobuf Include="Protos\flight_state.proto" GrpcServices="None" />  <!-- https://learn.microsoft.com/en-us/aspnet/core/grpc/dotnet-grpc?view=aspnetcore-10.0 -->
   </ItemGroup>
 </Project>
