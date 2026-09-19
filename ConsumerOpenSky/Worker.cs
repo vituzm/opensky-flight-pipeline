@@ -23,17 +23,42 @@ public class Worker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Consumer initialization.");
-        _logger.LogInformation("Press S to consume messages, Q to stop.");
 
         _consumer.Subscribe(TopicName);
         
         while (!stoppingToken.IsCancellationRequested)
         {
+            _logger.LogInformation("Press S to consume messages, Q to stop.");
+
             var key = await Task.Run(() => Console.ReadKey(intercept: true), stoppingToken);
 
             if (key.Key == ConsoleKey.S) {
-                var result = _consumer.Consume(stoppingToken);
-                await HandleMessage(result, stoppingToken);
+                try
+                {
+                    _logger.LogInformation("Consuming message...");
+                    var result = _consumer.Consume(TimeSpan.FromSeconds(20)); // Seconds to wait for a message
+                    if (result == null)
+                    {
+                        _logger.LogInformation("No message received.");
+                        continue;
+                    }
+
+                    await HandleMessage(result, stoppingToken);
+                }
+                catch (ConsumeException ex)
+                {
+                    if (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+                    {
+                        _logger.LogInformation($"Error: The subscribed topic is not available. Details: {ex.Error.Reason}");
+                        _logger.LogInformation("Please check the topic and try again.");
+                        _consumer.Subscribe(TopicName);
+                    }
+                    else
+                    {
+                        _logger.LogError($"Other Kafka consume error: {ex.Error.Reason}");
+                        throw;
+                    }
+                }
             }
             else if (key.Key == ConsoleKey.Q)
             {
