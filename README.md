@@ -16,7 +16,7 @@ The local infrastructure consists of a three-node Confluent Kafka cluster and Co
 ```mermaid
 flowchart LR
     OpenSky[OpenSky Network API] --> Producer[ProducerOpenSky]
-    Producer -->|Protobuf byte[]| Kafka[Kafka: flight-data]
+    Producer -->|"Protobuf byte[]"| Kafka[Kafka: flight-data]
     Kafka --> Consumer[ConsumerOpenSky]
     Producer -->|Failed deliveries| RocksDB[RocksDB]
     RocksDB -->|Reprocess| Producer
